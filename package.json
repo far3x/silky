@@ -1,0 +1,34 @@
+{
+  "name": "@far3x/silky",
+  "version": "0.1.0",
+  "description": "Smooth wheel scrolling for container-scrolled web apps, built to never cost a frame.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "src", "README.md", "LICENSE"],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": ["smooth-scroll", "smooth-scrolling", "scroll", "wheel", "lenis", "container"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/far3x/silky.git"
+  },
+  "homepage": "https://github.com/far3x/silky#readme",
+  "bugs": "https://github.com/far3x/silky/issues",
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  }
+}
