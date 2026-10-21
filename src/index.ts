@@ -1,5 +1,5 @@
 /**
- * silky — smooth wheel scrolling for pages that scroll inside their own containers.
+ * silky: smooth wheel scrolling for pages that scroll inside their own containers.
  *
  * One window wheel listener finds the scroller under the pointer (nested scrollers chain like
  * native scrolling) and glides it toward a target with frame-rate independent easing. Built to
@@ -7,7 +7,7 @@
  *
  * - one shared frame loop that runs only while something glides, and stops on a hidden page
  *   (a pending frame is never left dangling, so scrolling cannot stall after a window switch);
- * - per frame: one read and one write of scrollTop per gliding scroller, nothing else — no class
+ * - per frame: one read and one write of scrollTop per gliding scroller, nothing else: no class
  *   toggles (which restyle the whole subtree), no computed-style reads;
  * - computed styles (overflow, overscroll-behavior) are cached per element;
  * - content changes are followed, not fought: when the page moves a gliding scroller itself
