@@ -21,6 +21,10 @@ export interface SilkyOptions {
   /** Time constant of the glide in milliseconds: higher is smoother and longer. Default 167, the
    * glide of Lenis' default (lerp 0.1 at 60 Hz = a 6/s exponential decay). */
   smoothness?: number;
+  /** Distance from the top/bottom (px) over which a glide heading into the edge brakes. Default 240. */
+  edgeZone?: number;
+  /** How much longer the glide gets right at the edge (1 + edgeBrake times). Default 1.5. */
+  edgeBrake?: number;
   /** Multiplier applied to wheel deltas. Default 1. */
   wheelMultiplier?: number;
   /** Extra attribute names that opt an element out, besides `data-silky-prevent`. */
@@ -59,6 +63,8 @@ const STYLE = `[${STATE_ATTRIBUTE}] iframe{pointer-events:none}`;
 export function silky(options: SilkyOptions = {}): Silky {
   const smoothness = Math.max(1, options.smoothness ?? 1000 / 6);
   const multiplier = options.wheelMultiplier ?? 1;
+  const edgeZone = Math.max(1, options.edgeZone ?? 240);
+  const edgeBrake = Math.max(0, options.edgeBrake ?? 1.5);
   const prevent = ["data-silky-prevent", ...(options.preventAttributes ?? [])];
   const own = options.ownSelector;
   const glides = new Map<Element, Glide>();
@@ -107,16 +113,25 @@ export function silky(options: SilkyOptions = {}): Silky {
       if (node.tagName === "IFRAME" || !info(node).scrolls) continue;
       const room = limit(node);
       if (room < 1) continue;
-      const at = glides.get(node)?.target ?? node.scrollTop;
-      if ((delta > 0 && at < room - 0.5) || (delta < 0 && at > 0.5)) return node;
+      if (canMove(node, room, delta)) return node;
       // At its edge: a contained scroller keeps the wheel (no chaining), like native scrolling.
       if (info(node).contained) return null;
     }
     const root = document.scrollingElement;
     if (!root || prevented(root) || !info(root).scrolls) return null;
     const room = limit(root);
-    const at = glides.get(root)?.target ?? root.scrollTop;
-    return room >= 1 && ((delta > 0 && at < room - 0.5) || (delta < 0 && at > 0.5)) ? root : null;
+    return room >= 1 && canMove(root, room, delta) ? root : null;
+  }
+
+  /** Whether this wheel belongs to the scroller: it can still move that way, or it is still gliding
+   * toward that edge. A glide whose target already sits at the edge keeps the wheel until it
+   * arrives; handing it to the browser mid-glide started a native scroll of the same element that
+   * fought the glide (a jump, then an abrupt stop, at the top and bottom of pages). */
+  function canMove(node: Element, room: number, delta: number) {
+    const glide = glides.get(node);
+    const at = glide?.target ?? node.scrollTop;
+    if ((delta > 0 && at < room - 0.5) || (delta < 0 && at > 0.5)) return true;
+    return glide !== undefined && Math.sign(glide.target - glide.position) === Math.sign(delta);
   }
 
   function glideTo(element: Element, target: number) {
@@ -137,6 +152,20 @@ export function silky(options: SilkyOptions = {}): Silky {
     if (!glides.size) document.documentElement.removeAttribute(STATE_ATTRIBUTE);
   }
 
+  /** This frame's easing for a glide. Heading into the top or bottom, the glide brakes over the
+   * last `edgeZone` pixels: its time constant grows on a curve that starts gentle and steepens
+   * (quadratic in the distance covered), up to 1 + edgeBrake times at the edge, so the page lands
+   * softly instead of halting. */
+  function landing(glide: Glide, room: number, ease: number, elapsed: number) {
+    const toward = glide.target - glide.position;
+    const intoEdge = toward < 0 ? glide.target <= 0.5 : toward > 0 && glide.target >= room - 0.5;
+    if (!intoEdge || !edgeBrake) return ease;
+    const distance = toward < 0 ? glide.position : room - glide.position;
+    if (distance >= edgeZone) return ease;
+    const depth = 1 - distance / edgeZone;
+    return 1 - Math.exp(-elapsed / (smoothness * (1 + edgeBrake * depth * depth)));
+  }
+
   function step(now: number) {
     frame = 0;
     // A long gap (a busy or hidden page) never turns into one huge jump.
@@ -155,7 +184,7 @@ export function silky(options: SilkyOptions = {}): Silky {
       }
       const room = limit(element);
       glide.target = Math.min(Math.max(0, glide.target), room);
-      glide.position += (glide.target - glide.position) * ease;
+      glide.position += (glide.target - glide.position) * landing(glide, room, ease, elapsed);
       if (Math.abs(glide.target - glide.position) < SETTLE_PX) glide.position = glide.target;
       element.scrollTop = glide.position;
       glide.written = element.scrollTop;

@@ -51,6 +51,8 @@ Pick based on what you are building:
 silky({
   smoothness: 166.7,          // how long the glide lasts, in ms (higher = softer)
   wheelMultiplier: 1,         // scroll distance per wheel step ("more force")
+  edgeZone: 240,              // px before the top/bottom where the glide starts braking
+  edgeBrake: 1.5,             // how strongly it brakes right at the edge (soft landing)
   preventAttributes: [],      // extra attributes that turn silky off for an element
   ownSelector: ".lenis",      // areas already handled by another smooth scroller
   respectReducedMotion: false // turn off for users who prefer reduced motion
